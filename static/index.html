@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Amazon 在庫管理</title>
+<link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+<div id="app">
+  <nav class="sidebar">
+    <div class="sidebar-logo">Amazon 在庫管理</div>
+    <ul class="nav-list">
+      <li><a href="#" class="nav-link active" data-page="dashboard">Amazon ダッシュボード</a></li>
+      <li><a href="#" class="nav-link" data-page="products">Amazon 商品管理</a></li>
+      <li><a href="#" class="nav-link" data-page="orders">Amazon 発注管理</a></li>
+      <li class="nav-section-label">楽天</li>
+      <li><a href="#" class="nav-link nav-sub" data-page="r-dashboard">ダッシュボード</a></li>
+      <li><a href="#" class="nav-link nav-sub" data-page="r-products">商品管理</a></li>
+      <li><a href="#" class="nav-link nav-sub" data-page="r-orders">受注・発注</a></li>
+      <li class="nav-section-label">セールモンスター</li>
+      <li><a href="#" class="nav-link nav-sub" data-page="sm-dashboard">ダッシュボード</a></li>
+      <li><a href="#" class="nav-link nav-sub" data-page="sm-products">商品管理</a></li>
+      <li class="nav-section-label">Yahoo!</li>
+      <li><a href="#" class="nav-link nav-sub" data-page="y-dashboard">ダッシュボード</a></li>
+      <li><a href="#" class="nav-link nav-sub" data-page="y-products">商品管理</a></li>
+      <li><a href="#" class="nav-link" data-page="suppliers">仕入れ先</a></li>
+      <li style="margin-top:auto;border-top:1px solid var(--gray-200);padding-top:8px">
+        <a href="#" class="nav-link" id="btn-settings">⚙ 発注設定</a>
+      </li>
+    </ul>
+  </nav>
+
+  <main class="main-content">
+    <!-- Dashboard -->
+    <div id="page-dashboard" class="page active">
+      <h1 class="page-title">Amazon ダッシュボード</h1>
+      <div class="stat-grid" id="stat-grid"></div>
+      <div class="section-title">在庫不足商品</div>
+      <div id="low-stock-list"></div>
+      <div class="section-title" style="margin-top:28px">
+        発注提案
+        <span id="reorder-settings-label" style="font-size:13px;font-weight:400;color:var(--gray-500);margin-left:12px"></span>
+      </div>
+      <div id="reorder-list"></div>
+    </div>
+
+    <!-- Products -->
+    <div id="page-products" class="page">
+      <div class="page-header">
+        <h1 class="page-title">Amazon 商品管理</h1>
+        <div class="header-actions">
+          <input type="text" id="product-search" class="input" placeholder="商品名・SKUで検索..." style="width:200px">
+          <select id="stock-filter" class="input" style="width:120px">
+            <option value="">在庫：すべて</option>
+            <option value="low">在庫不足のみ</option>
+            <option value="ok">在庫あり</option>
+          </select>
+          <select id="page-size" class="input" style="width:90px">
+            <option value="50">50件</option>
+            <option value="100">100件</option>
+            <option value="200">200件</option>
+            <option value="0">全件</option>
+          </select>
+          <button class="btn btn-secondary" id="btn-bulk-reorder">計算発注点を一括反映</button>
+          <button class="btn btn-secondary" id="btn-amazon-import">Amazon取込</button>
+          <button class="btn btn-secondary" id="btn-listing-import">出品レポート取込</button>
+          <a class="btn btn-secondary" id="btn-export-csv" href="/api/products/export-csv" download="在庫データ.csv">CSVエクスポート</a>
+          <label class="btn btn-secondary">
+            CSVインポート
+            <input type="file" id="csv-file" accept=".csv" style="display:none">
+          </label>
+          <button class="btn btn-primary" id="btn-add-product">+ 商品追加</button>
+        </div>
+      </div>
+      <div id="product-table-wrap"></div>
+      <div class="pagination" id="product-pagination"></div>
+    </div>
+
+    <!-- Inventory -->
+    <div id="page-inventory" class="page">
+      <div class="page-header">
+        <h1 class="page-title">入出庫記録</h1>
+        <button class="btn btn-primary" id="btn-add-transaction">+ 入出庫記録</button>
+      </div>
+      <div id="transaction-table-wrap"></div>
+    </div>
+
+    <!-- Channel Stock Pages -->
+    <div id="page-ch-amazon" class="page">
+      <div class="page-header">
+        <h1 class="page-title">Amazon 在庫</h1>
+        <input type="text" id="ch-amazon-search" class="input" placeholder="商品名・SKUで検索..." style="width:220px">
+      </div>
+      <div id="ch-amazon-table"></div>
+    </div>
+    <div id="page-ch-yahoo" class="page">
+      <div class="page-header">
+        <h1 class="page-title">Yahoo 在庫</h1>
+        <input type="text" id="ch-yahoo-search" class="input" placeholder="商品名・SKUで検索..." style="width:220px">
+      </div>
+      <div id="ch-yahoo-table"></div>
+    </div>
+    <div id="page-ch-rakuten" class="page">
+      <div class="page-header">
+        <h1 class="page-title">楽天 在庫</h1>
+        <input type="text" id="ch-rakuten-search" class="input" placeholder="商品名・SKUで検索..." style="width:220px">
+      </div>
+      <div id="ch-rakuten-table"></div>
+    </div>
+    <div id="page-ch-mercari" class="page">
+      <div class="page-header">
+        <h1 class="page-title">メルカリ 在庫</h1>
+        <input type="text" id="ch-mercari-search" class="input" placeholder="商品名・SKUで検索..." style="width:220px">
+      </div>
+      <div id="ch-mercari-table"></div>
+    </div>
+
+    <!-- Orders -->
+    <div id="page-orders" class="page">
+      <div class="page-header">
+        <h1 class="page-title">Amazon 発注・受領管理</h1>
+      </div>
+
+      <div class="tab-bar">
+        <button class="tab-btn active" id="tab-btn-orders" onclick="switchOrderTab('orders')">発注管理</button>
+        <button class="tab-btn" id="tab-btn-receipts" onclick="switchOrderTab('receipts')">受領管理</button>
+      </div>
+
+      <!-- 発注管理タブ -->
+      <div id="orders-tab-content">
+        <div class="section-title" style="display:flex;align-items:center;justify-content:space-between">
+          <span>発注提案 <span id="order-reorder-settings-label" style="font-size:13px;font-weight:400;color:var(--gray-500);margin-left:12px"></span></span>
+        </div>
+        <div id="order-reorder-list" style="margin-bottom:24px"></div>
+
+        <div class="section-title" style="display:flex;align-items:center;justify-content:space-between">
+          <span>発注プラン</span>
+          <div style="display:flex;gap:8px;align-items:center">
+            <button class="btn btn-secondary" id="btn-dl-order-template">テンプレートDL</button>
+            <button class="btn btn-primary" id="btn-import-order-plan">CSVインポート</button>
+          </div>
+        </div>
+        <div id="order-plans-wrap" style="margin-bottom:24px"></div>
+
+        <div class="section-title" style="display:flex;align-items:center;justify-content:space-between">
+          <span>発注履歴</span>
+          <div style="display:flex;gap:8px;align-items:center">
+            <select id="order-status-filter" class="input" style="width:120px">
+              <option value="">すべて</option>
+              <option value="pending">未発注</option>
+              <option value="ordered">発注済</option>
+              <option value="received">受領済</option>
+              <option value="cancelled">キャンセル</option>
+            </select>
+            <button class="btn btn-primary" id="btn-add-order">+ 手動追加</button>
+          </div>
+        </div>
+        <div id="order-table-wrap"></div>
+
+      </div>
+
+      <!-- 受領管理タブ -->
+      <div id="receipts-tab-content" style="display:none">
+        <div class="section-title" style="display:flex;align-items:center;justify-content:space-between">
+          <span>受領管理</span>
+          <div style="display:flex;gap:8px;align-items:center">
+            <button class="btn btn-secondary" id="btn-dl-receipt-template">テンプレートDL</button>
+            <button class="btn btn-primary" id="btn-import-receipt">CSVインポート</button>
+          </div>
+        </div>
+        <div id="receipts-wrap"></div>
+      </div>
+    </div>
+
+    <!-- Rakuten Dashboard -->
+    <div id="page-r-dashboard" class="page">
+      <h1 class="page-title">楽天 ダッシュボード</h1>
+      <div class="stat-grid" id="r-stat-grid"></div>
+      <div class="section-title">楽天 在庫不足商品</div>
+      <div id="r-low-stock-list"></div>
+      <div class="section-title" style="margin-top:28px">最近の受注</div>
+      <div id="r-recent-orders"></div>
+    </div>
+
+    <!-- Rakuten Products -->
+    <div id="page-r-products" class="page">
+      <div class="page-header">
+        <h1 class="page-title">楽天 商品管理</h1>
+        <div class="header-actions">
+          <input type="text" id="r-product-search" class="input" placeholder="商品名・SKU・楽天番号で検索..." style="width:220px">
+          <label class="input" style="display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:400">
+            <input type="checkbox" id="r-rakuten-only"> 楽天出品中のみ
+          </label>
+          <button class="btn btn-secondary" id="btn-r-import">CSVインポート</button>
+        </div>
+      </div>
+      <div id="r-product-table-wrap"></div>
+      <div class="pagination" id="r-product-pagination"></div>
+    </div>
+
+    <!-- Rakuten Orders -->
+    <div id="page-r-orders" class="page">
+      <div class="page-header">
+        <h1 class="page-title">楽天 受注・発注</h1>
+      </div>
+      <div class="tab-bar">
+        <button class="tab-btn active" id="r-tab-btn-orders" onclick="switchRakutenTab('orders')">受注管理</button>
+        <button class="tab-btn" id="r-tab-btn-reorder" onclick="switchRakutenTab('reorder')">発注提案</button>
+      </div>
+
+      <!-- 受注管理タブ -->
+      <div id="r-orders-content">
+        <div style="display:flex;gap:10px;align-items:center;margin-bottom:16px;flex-wrap:wrap">
+          <input type="text" id="r-order-search" class="input" placeholder="注文番号・商品名で検索..." style="width:220px">
+          <input type="date" id="r-order-date-from" class="input" style="width:150px">
+          <button id="btn-r-order-import" class="btn btn-secondary">受注CSVインポート</button>
+        </div>
+        <div id="r-order-stat" style="margin-bottom:12px;font-size:13px;color:var(--gray-500)"></div>
+        <div id="r-order-table-wrap"></div>
+      </div>
+
+      <!-- 発注提案タブ -->
+      <div id="r-reorder-content" style="display:none">
+        <div style="display:flex;gap:10px;align-items:center;margin-bottom:8px;flex-wrap:wrap">
+          <input type="text" class="input" placeholder="商品名・SKUで検索..." style="width:220px" oninput="rReorderSearch=this.value;renderRakutenReorderTable()">
+          <label class="form-label" style="margin:0">発注日:</label>
+          <input type="date" id="r-bulk-order-date" class="input" style="width:150px">
+          <button class="btn btn-primary" onclick="rBulkRegisterOrderPlan()">チェックした商品を発注プランに登録</button>
+        </div>
+        <div id="r-reorder-table-wrap"></div>
+      </div>
+    </div>
+
+    <!-- SaleMonster Dashboard -->
+    <div id="page-sm-dashboard" class="page">
+      <div class="page-header">
+        <h1 class="page-title">セールモンスター ダッシュボード</h1>
+        <div class="header-actions">
+          <button class="btn btn-secondary" id="btn-sm-import">商品レポート取込</button>
+        </div>
+      </div>
+      <div class="stat-grid" id="sm-stat-grid"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:8px">
+        <div>
+          <div class="section-title">審査NG商品</div>
+          <div id="sm-ng-list"></div>
+        </div>
+        <div>
+          <div class="section-title">未登録商品</div>
+          <div id="sm-unregistered-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SaleMonster Products -->
+    <div id="page-sm-products" class="page">
+      <div class="page-header">
+        <h1 class="page-title">セールモンスター 商品管理</h1>
+        <div class="header-actions">
+          <input type="text" id="sm-product-search" class="input" placeholder="商品名・SKUで検索..." style="width:220px">
+          <select id="sm-review-filter" class="input" style="width:130px">
+            <option value="">全審査状況</option>
+            <option value="ok">審査OK</option>
+            <option value="ng">審査NG</option>
+          </select>
+        </div>
+      </div>
+      <div id="sm-product-table-wrap"></div>
+      <div class="pagination" id="sm-product-pagination"></div>
+    </div>
+
+    <!-- Yahoo Dashboard -->
+    <div id="page-y-dashboard" class="page">
+      <h1 class="page-title">Yahoo! ダッシュボード</h1>
+      <div class="stat-grid" id="y-stat-grid"></div>
+      <div class="section-title">Yahoo! 在庫不足商品</div>
+      <div id="y-low-stock-list"></div>
+    </div>
+
+    <!-- Yahoo Products -->
+    <div id="page-y-products" class="page">
+      <div class="page-header">
+        <h1 class="page-title">Yahoo! 商品管理</h1>
+        <div class="header-actions">
+          <input type="text" id="y-product-search" class="input" placeholder="商品名・SKUで検索..." style="width:220px">
+          <label class="input" style="display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:400">
+            <input type="checkbox" id="y-yahoo-only"> Yahoo!出品中のみ
+          </label>
+          <button class="btn btn-secondary" id="btn-y-import">データ取込</button>
+        </div>
+      </div>
+      <div id="y-product-table-wrap"></div>
+      <div class="pagination" id="y-product-pagination"></div>
+    </div>
+
+    <!-- Suppliers -->
+    <div id="page-suppliers" class="page">
+      <div class="page-header">
+        <h1 class="page-title">仕入れ先管理</h1>
+        <button class="btn btn-primary" id="btn-add-supplier">+ 仕入先追加</button>
+      </div>
+      <div id="supplier-table-wrap"></div>
+    </div>
+  </main>
+</div>
+
+<!-- Modal -->
+<div id="modal-overlay" class="modal-overlay hidden">
+  <div class="modal" id="modal">
+    <div class="modal-header">
+      <h2 id="modal-title"></h2>
+      <button class="modal-close" id="modal-close">&times;</button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" id="modal-cancel">キャンセル</button>
+      <button class="btn btn-primary" id="modal-save">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast" class="toast hidden"></div>
+
+<script src="/static/js/app.js?v=43"></script>
+</body>
+</html>

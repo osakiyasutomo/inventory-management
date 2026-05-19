@@ -1,0 +1,19 @@
+# データベース（実データ）
+inventory.db
+
+# Claude Code設定
+.claude/
+
+# Pythonキャッシュ
+__pycache__/
+*.pyc
+*.pyo
+
+# 一時ファイル
+*.tmp.*
+*.tmp
+
+# 環境
+.env
+venv/
+.venv/
